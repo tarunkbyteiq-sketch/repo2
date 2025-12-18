@@ -1,0 +1,46 @@
+name: Repo2 CI
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+
+jobs:
+  backend-ci:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: Import check (FastAPI app)
+        run: |
+          python - <<EOF
+          from app.main import app
+          print("FastAPI app loaded successfully")
+          EOF
+
+      - name: Build Docker image
+        run: docker build -t repo2-backend .
+
+      - name: Run container
+        run: |
+          docker run -d -p 8000:8000 --name repo2 repo2-backend
+          sleep 10
+
+      - name: Health check
+        run: curl http://localhost:8000/docs
+
+      - name: Stop container
+        if: always()
+        run: docker stop repo2 && docker rm repo2
